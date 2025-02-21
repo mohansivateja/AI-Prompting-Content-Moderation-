@@ -1,0 +1,85 @@
+import os
+import streamlit as st
+import google.generativeai as genai
+from PIL import Image
+
+genai.configure(api_key=os.getenv("AIzaSyCE2De6RE2nHAKA5wRVCLNgMpLSo-bBg9w")) 
+model = genai.GenerativeModel("gemini-2.0-flash")
+
+def summarize_text(text):
+    """Summarizes the given text using Gemini API."""
+    try:
+        response = model.generate_content(f"Summarize the following text:\n{text}")
+        return response.text
+    except Exception as e:
+        return f"Error: {e}"
+
+st.title("AI-Powered Utility App")
+
+# Navigation
+app_mode = st.sidebar.selectbox("Choose a feature", [
+    "Text Summarization",
+    "Podcast Script Generator",
+    "Content Moderation",
+    "Workflow Automation"
+])
+
+if app_mode == "Text Summarization":
+    st.header("Text Summarization")
+    text_input = st.text_area("Enter text to summarize:")
+    if st.button("Summarize") and text_input:
+        summary = summarize_text(text_input)
+        st.success("Summary:")
+        st.write(summary)
+
+elif app_mode == "Podcast Script Generator":
+    st.header("Podcast Script Generator 🎙️")
+    topic = st.text_input("Enter your podcast topic:")
+    if st.button("Generate Podcast Script") and topic:
+        script = model.generate_content(
+            f"Generate a detailed podcast script about '{topic}'. Include an introduction, main discussion points, expert insights, and a conclusion."
+        )
+        st.success("Generated Podcast Script:")
+        st.write(script.text)
+
+elif app_mode == "Content Moderation":
+    st.header("Content Moderation System")
+    content_types = ["text", "image", "video"]
+    content_type = st.selectbox("Select content type", content_types)
+    content = None
+
+    if content_type == "text":
+        content = st.text_area("Enter content or URL")
+    elif content_type == "image":
+        uploaded_file = st.file_uploader("Upload an image", type=["jpg", "png", "jpeg"])
+        if uploaded_file is not None:
+            content = Image.open(uploaded_file)
+            st.image(content, caption="Uploaded Image", use_column_width=True)
+    elif content_type == "video":
+        uploaded_file = st.file_uploader("Upload a video", type=["mp4", "mov", "avi"])
+        if uploaded_file is not None:
+            content = uploaded_file
+            st.video(uploaded_file)
+
+    if st.button("Moderate Content") and content is not None:
+        moderation_result = {
+            "text": {"toxicity": 10, "spam": 5, "inappropriate": 100},
+            "image": {"toxicity": 20, "spam": 15, "inappropriate": 50},
+            "video": {"toxicity": 20, "spam": 15, "inappropriate": 75},
+        }
+        scores = moderation_result.get(content_type, {})
+        overall_score = sum(scores.values()) / 3
+        status = "Allow" if overall_score <= 25 else "Flag for Review" if overall_score <= 60 else "Block"
+        scores["result"] = status
+        st.write(f"{content_type.capitalize()} Moderation Result:", scores)
+
+elif app_mode == "Workflow Automation":
+    st.header("AI Text Generation with Gemini")
+    prompt = st.text_area("Enter your prompt:")
+    if st.button("Generate Response") and prompt:
+        response = model.generate_content(prompt)
+        st.success("AI Response:")
+        st.write(response.text)
+
+st.sidebar.markdown("---")
+st.sidebar.info("AI-powered tool using Google Gemini API")
